@@ -41,6 +41,38 @@
 extern "C" {
 #endif
 
+typedef uint32_t CCMode;
+typedef uint32_t CCPadding;
+typedef uint32_t CCModeOptions;
+
+enum {
+        kCCModeECB              = 1,
+        kCCModeCBC              = 2,
+        kCCModeCFB              = 3,
+        kCCModeCTR              = 4,
+        kCCModeF8               = 5, // Unimplemented for now (not included)
+        kCCModeLRW              = 6, // Unimplemented for now (not included)
+        kCCModeOFB              = 7,
+        kCCModeXTS              = 8,
+        kCCModeRC4              = 9,
+        kCCModeCFB8             = 10,
+};
+
+CCCryptorStatus CCCryptorCreateWithMode(
+    CCOperation         op,                             /* kCCEncrypt, kCCDecrypt */
+    CCMode                      mode,
+    CCAlgorithm         alg,
+    CCPadding           padding,
+    const void          *iv,                    /* optional initialization vector */
+    const void          *key,                   /* raw key material */
+    size_t                      keyLength,      
+    const void          *tweak,                 /* raw tweak material */
+    size_t                      tweakLength,    
+    int                         numRounds,              /* 0 == default */
+    CCModeOptions       options,
+    CCCryptorRef        *cryptorRef)    /* RETURNED */
+__OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
+
 /*
 	This is an SPI header.  It includes some work in progress implementation notes that
 	will be removed when this is promoted to an API set.
