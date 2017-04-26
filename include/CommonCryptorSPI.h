@@ -45,6 +45,7 @@ typedef uint32_t CCMode;
 typedef uint32_t CCPadding;
 typedef uint32_t CCModeOptions;
 
+#ifndef _CC_COMMON_CRYPTOR_
 enum {
         kCCModeECB              = 1,
         kCCModeCBC              = 2,
@@ -57,6 +58,7 @@ enum {
         kCCModeRC4              = 9,
         kCCModeCFB8             = 10,
 };
+#endif
 
 CCCryptorStatus CCCryptorCreateWithMode(
     CCOperation         op,                             /* kCCEncrypt, kCCDecrypt */
