@@ -19,7 +19,7 @@ entryPoint(CommonCryptoWithData,"CommonCrypto With Data Testing")
 
 static int kTestTestCount = 1;
 
-int CommonCryptoWithData(int argc, char *const *argv)
+int CommonCryptoWithData(int __unused argc, char *const * __unused argv)
 {
     CCCryptorStatus retval;
     CCCryptorRef cryptor;
@@ -33,8 +33,9 @@ int CommonCryptoWithData(int argc, char *const *argv)
                                      kCCOptionECBMode, key->bytes, key->len, NULL,
                                      data, AES_KEYST_SIZE, &cryptor, NULL);
 
+    CCCryptorRelease(cryptor);
     ok(retval == kCCSuccess, "Cryptor was created");
-    
+    free(key);
     return 0;
 }
 #endif

@@ -25,7 +25,6 @@
 #define _CC_CryptorSPI_H_
 
 #include <sys/types.h>
-#include <sys/param.h>
 #include <stdint.h>
 
 #include <string.h>
@@ -41,40 +40,10 @@
 extern "C" {
 #endif
 
-typedef uint32_t CCMode;
-typedef uint32_t CCPadding;
-typedef uint32_t CCModeOptions;
-
-#ifndef _CC_COMMON_CRYPTOR_
-enum {
-        kCCModeECB              = 1,
-        kCCModeCBC              = 2,
-        kCCModeCFB              = 3,
-        kCCModeCTR              = 4,
-        kCCModeF8               = 5, // Unimplemented for now (not included)
-        kCCModeLRW              = 6, // Unimplemented for now (not included)
-        kCCModeOFB              = 7,
-        kCCModeXTS              = 8,
-        kCCModeRC4              = 9,
-        kCCModeCFB8             = 10,
-};
+#if defined(_WIN32)
+    //remove after rdar://problem/28144944
+    int timingsafe_bcmp(const void *b1, const void *b2, size_t n);
 #endif
-
-CCCryptorStatus CCCryptorCreateWithMode(
-    CCOperation         op,                             /* kCCEncrypt, kCCDecrypt */
-    CCMode                      mode,
-    CCAlgorithm         alg,
-    CCPadding           padding,
-    const void          *iv,                    /* optional initialization vector */
-    const void          *key,                   /* raw key material */
-    size_t                      keyLength,      
-    const void          *tweak,                 /* raw tweak material */
-    size_t                      tweakLength,    
-    int                         numRounds,              /* 0 == default */
-    CCModeOptions       options,
-    CCCryptorRef        *cryptorRef)    /* RETURNED */
-__OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
-
 /*
 	This is an SPI header.  It includes some work in progress implementation notes that
 	will be removed when this is promoted to an API set.
@@ -292,11 +261,17 @@ __OSX_AVAILABLE_STARTING(__MAC_10_8, __IPHONE_5_0);
 /*
 	This terminates the GCM state gcm and stores the tag in tag of length
     taglen octets.
+ 
+    The tag must be verified by comparing the computed and expected values
+    using timingsafe_bcmp. Other comparison functions (e.g. memcmp)
+    must not be used as they may be vulnerable to practical timing attacks,
+    leading to tag forgery.
+
 */
 
 CCCryptorStatus CCCryptorGCMFinal(
 	CCCryptorRef cryptorRef,
-	const void *tag,
+	void   *tagOut,
 	size_t *tagLength)
 __OSX_AVAILABLE_STARTING(__MAC_10_8, __IPHONE_5_0);
 
@@ -316,6 +291,12 @@ __OSX_AVAILABLE_STARTING(__MAC_10_8, __IPHONE_5_0);
     the manual functions. If you are processing many packets under the same 
     key you shouldn’t use this function as it invokes the pre–computation 
     with each call.
+
+    The tag must be verified by comparing the computed and expected values
+    using timingsafe_bcmp. Other comparison functions (e.g. memcmp)
+    must not be used as they may be vulnerable to practical timing attacks,
+    leading to tag forgery.
+
 */
 
 CCCryptorStatus CCCryptorGCM(
@@ -330,7 +311,7 @@ CCCryptorStatus CCCryptorGCM(
 	const void 		*dataIn,
 	size_t 			dataInLength,
   	void 			*dataOut,
-	const void 		*tag,
+	void 		    *tagOut,
 	size_t 			*tagLength)
 __OSX_AVAILABLE_STARTING(__MAC_10_8, __IPHONE_5_0);
     

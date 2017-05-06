@@ -9,7 +9,6 @@ entryPoint(CommonCryptoSymRegression,"CommonCrypto Base Behavior Regression Test
 #else
 
 
-
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,11 +16,7 @@ entryPoint(CommonCryptoSymRegression,"CommonCrypto Base Behavior Regression Test
 #include <CommonCrypto/CommonCryptor.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <sys/uio.h>
-#include <unistd.h>
-#include "ccMemory.h"
-
-// #include <CoreServices/../Frameworks/CarbonCore.framework/Headers/MacErrors.h>
+#include "../../lib/ccMemory.h"
 
 /*
  * Defaults.
@@ -63,8 +58,24 @@ typedef enum {
 #endif
 
 
+#if defined (_WIN32)
+#include <windows.h>
+static int
+appGetRandomBytes(void *keyBytes, size_t keySizeInBytes)
+{
+    HCRYPTPROV hProvider;
+    
+    BOOL rc = CryptAcquireContext(&hProvider, 0, 0, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT | CRYPT_SILENT);
+    if (rc == TRUE) {
+        rc = CryptGenRandom(hProvider, keySizeInBytes, keyBytes);
+        CryptReleaseContext(hProvider, 0);
+    }
+    
+    return rc == TRUE ? 0 : -1;
 
-
+}
+#else
+#include <unistd.h>
 static void
 appGetRandomBytes(void *keyBytes, size_t keySizeInBytes)
 {
@@ -80,6 +91,7 @@ appGetRandomBytes(void *keyBytes, size_t keySizeInBytes)
     }
     close(fd);
 }
+#endif
 
 /* min <= return <= max */
 static unsigned 
@@ -91,8 +103,7 @@ genRand(unsigned min, unsigned max)
 	}
 	appGetRandomBytes(&i, 4);
 	return (min + (i % (max - min + 1)));
-}	
-
+}
 
 static void printCCError(const char *str, CCCryptorStatus crtn)
 {
@@ -370,7 +381,7 @@ static int doTest(const uint8_t *ptext,
 	bool inPlace,	
 	size_t ctxSize,		
 	bool askOutSize,
-	bool quiet)
+	__unused bool quiet)
 {
 	uint8_t			keyBytes[MAX_KEY_SIZE];
 	uint8_t			iv[MAX_BLOCK_SIZE];
@@ -462,11 +473,22 @@ static bool isBitSet(unsigned bit, unsigned word)
 	return (word & mask) ? true : false;
 }
 
-
 static int kTestTestCount = 7001;
 
 
-int CommonCryptoSymRegression(int argc, char *const *argv)
+#if defined (_WIN32)
+#include <conio.h>
+static void purge_stdin(){
+    while (_kbhit())
+        _getch();
+}
+#else
+static void purge_stdin(){
+    fpurge(stdin);
+}
+#endif
+
+int CommonCryptoSymRegression(int __unused argc, char *const * __unused argv)
 {
 	unsigned			loop;
 	uint8_t				*ptext;
@@ -525,7 +547,7 @@ int CommonCryptoSymRegression(int argc, char *const *argv)
 	if(!quiet) diag("\n");
 	
 	if(pauseInterval) {
-		fpurge(stdin);
+        purge_stdin();
 		diag("Top of test; hit CR to proceed: ");
 		getchar();
 	}
@@ -678,8 +700,8 @@ int CommonCryptoSymRegression(int argc, char *const *argv)
 				break;
 			}
 			if(pauseInterval && ((loop % pauseInterval) == 0)) {
-				char c;
-				fpurge(stdin);
+				int c;
+                purge_stdin();
 				diag("Hit CR to proceed, q to abort: ");
 				c = getchar();
 				if(c == 'q') {
@@ -701,7 +723,7 @@ testDone:
     ok(rtn == 0, "ccSymTest");
 
 	if(pauseInterval) {
-		fpurge(stdin);
+        purge_stdin();
 		diag("ModuleDetach/Unload complete; hit CR to exit: ");
 		getchar();
 	}

@@ -1,4 +1,4 @@
-#include <Availability.h>
+
 #include "capabilities.h"
 #include "testmore.h"
 #include "testbyteBuffer.h"
@@ -11,7 +11,7 @@ entryPoint(CommonEC,"Elliptic Curve Cryptography")
 
 static int kTestTestCount = 9;
 
-int CommonEC(int argc, char *const *argv) {
+int CommonEC(int __unused argc, char *const * __unused argv) {
 	CCCryptorStatus retval;
     size_t keysize;
     CCECCryptorRef publicKey, privateKey;
@@ -112,7 +112,7 @@ int CommonEC(int argc, char *const *argv) {
     CCECCryptorRelease(publicKey);
     CCECCryptorRelease(publicKey2);
     CCECCryptorRelease(privateKey);
-
+    free(hash);
     return accum;
 }
 #endif /* CCEC */

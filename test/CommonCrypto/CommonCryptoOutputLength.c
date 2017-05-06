@@ -31,7 +31,7 @@ testOutputLength(CCOperation op, CCMode mode, CCAlgorithm alg, size_t keyLength,
     retval = CCCryptorGetOutputLength(cryptorRef, inputLength, final);
     ok(retval == expectedLen, "Got Length Value Expected");
     if(retval != expectedLen) {
-        printf("bufferPos = %lu + inputLength = %lu Got %lu expected %lu\n", bufferPos, inputLength, retval, expectedLen);
+        printf("bufferPos = %zu + inputLength = %zu Got %zu expected %zu\n", bufferPos, inputLength, retval, expectedLen);
     }
     status = CCCryptorRelease(cryptorRef);
     ok(status == kCCSuccess, "Released Cryptor");
@@ -48,7 +48,7 @@ static inline size_t pkcs7decryptUpdateResultLength_by_blocksize(size_t len, siz
     return round_down_by_blocksize(len, blocksize);
 }
 
-int CommonCryptoOutputLength (int argc, char *const *argv)
+int CommonCryptoOutputLength (int __unused argc, char *const * __unused argv)
 {
     int verbose = 0;
 	plan_tests(kTestTestCount);

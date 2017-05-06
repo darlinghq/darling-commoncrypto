@@ -370,6 +370,7 @@ static int testNewDiscreetDigest(CCDigestAlgorithm alg, char *input, byteBuffer 
     ok(status = expectedEqualsComputed(testString("New OneShot Digest %s", alg), expected, computedMD2), "Digest is as expected");
 out:
     free(computedMD);
+    free(computedMD2);
     return status;
 }
 
@@ -480,7 +481,7 @@ static int testDigests(DigestVector *dv) {
 
 static size_t testsPerVector = 242;
 
-int CommonDigest(int argc, char *const *argv) {
+int CommonDigest(int __unused argc, char *const * __unused argv) {
 	plan_tests((int) (dvLen*testsPerVector));
     
     for(size_t testcase = 0; testcase < dvLen; testcase++) {

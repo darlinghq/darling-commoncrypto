@@ -28,20 +28,20 @@
 uint64_t
 crc_normal_init(crcInfoPtr crc)
 {
-    dispatch_once(&crc->table_init, ^{
-        gen_std_crc_table(crc);
-    });
+    cc_dispatch_once(&crc->table_init, crc, gen_std_crc_table);
     return crc->descriptor->def.parms.initial_value;
 }
 
 static inline uint8_t
 crc_table_value8(uint8_t *table, uint8_t p, uint8_t crc) {
-    return table[((crc) ^ p) & 0xff] ^ (crc << 8);
+    uint8_t t = (uint8_t) (crc << 8);
+    return table[((crc) ^ p) & 0xff] ^ t;
 }
 
 static inline uint16_t
 crc_table_value16(uint16_t *table, uint8_t p, uint16_t crc) {
-    return table[((crc>>8) ^ p) & 0xff] ^ (crc << 8);
+    uint16_t t = (uint16_t) (crc << 8);
+    return table[((crc>>8) ^ p) & 0xff] ^ t;
 }
 
 static inline uint32_t
@@ -74,15 +74,13 @@ crc_normal_update(crcInfoPtr crc, uint8_t *p, size_t len, uint64_t current)
 uint64_t
 crc_normal_final(crcInfoPtr crc, uint64_t current)
 {
-    return current ^ crc->descriptor->def.parms.final_xor & descmaskfunc(crc->descriptor);
+    return current ^ (crc->descriptor->def.parms.final_xor & descmaskfunc(crc->descriptor));
 }
 
 uint64_t
 crc_normal_oneshot(crcInfoPtr crc, uint8_t *p, size_t len)
 {
-    dispatch_once(&crc->table_init, ^{
-        gen_std_crc_table(crc);
-    });
+    cc_dispatch_once(&crc->table_init, crc, gen_std_crc_table);
     uint64_t current = crc->descriptor->def.parms.initial_value;
     while (len--) {
         switch (crc->descriptor->def.parms.width) {

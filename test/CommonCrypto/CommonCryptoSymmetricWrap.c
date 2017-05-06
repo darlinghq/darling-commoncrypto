@@ -10,6 +10,7 @@
 #include "testbyteBuffer.h"
 #include "testmore.h"
 #include "capabilities.h"
+#include <CommonCryptoError.h>
 
 #if (CCSYMWRAP == 0)
 entryPoint(CommonSymmetricWrap,"Symmetric Wrap")
@@ -50,6 +51,13 @@ wrapTest(char *kekstr, char *keystr, char *wrapped_keystr)
     ok(CCSymmetricKeyUnwrap(kCCWRAPAES, iv, ivLen, kek->bytes, kek->len, wrapped, wrapped_size, unwrapped, &unwrapped_size) == 0, "function is successful");
     bb = bytesToBytes(unwrapped, unwrapped_size);
     ok(bytesAreEqual(bb, key), "Equal to original key");
+    
+    
+    ok(CCSymmetricKeyUnwrap(kCCWRAPAES, iv, ivLen, kek->bytes, kek->len-1, wrapped, wrapped_size, unwrapped, &unwrapped_size) == kCCParamError, "kek length is wrong, function should fail");
+    kek->bytes[0] ^=1;
+    ok(CCSymmetricKeyUnwrap(kCCWRAPAES, iv, ivLen, kek->bytes, kek->len, wrapped, wrapped_size, unwrapped, &unwrapped_size) == kCCDecodeError, "decoding error, function should fail");
+    
+    
     free(bb);
     free(kek);
     free(key);
@@ -65,7 +73,7 @@ wrapTest(char *kekstr, char *keystr, char *wrapped_keystr)
 static int kTestTestCount = 35;
 
 int
-CommonSymmetricWrap(int argc, char *const *argv)
+CommonSymmetricWrap(int __unused argc, char *const * __unused argv)
 {
     char *kek, *key, *wrapped_key;
     int accum = 0;
@@ -86,7 +94,7 @@ CommonSymmetricWrap(int argc, char *const *argv)
 
     if(verbose) diag("Test 3");
     byteBuffer keybuf = mallocByteBuffer(2048);
-    for(int i=0; i<2048; i++) keybuf->bytes[i] = i%256;
+    for(int i=0; i<2048; i++) keybuf->bytes[i] = (uint8_t)(i%256);
     key = bytesToHexString(keybuf);
     free(keybuf);
     accum |= wrapTest(kek, key, NULL);

@@ -2,7 +2,7 @@
 #include "testbyteBuffer.h"
 #include "testmore.h"
 #include "capabilities.h"
-#include "CommonRandomSPI.h"
+#include <CommonCrypto/CommonBigNum.h>
 
 
 
@@ -410,6 +410,8 @@ static int testPrime()
     CCBigNumRef b = CCBigNumFromHexString(&status, "09c75c");
     ok(!CCBigNumIsPrime(&status, b), "not prime number");
 
+    CCBigNumFree(a);
+    CCBigNumFree(b);
     return 0;
 }
 
@@ -475,10 +477,7 @@ static int testMulMod()
     return 0;
 }
 
-
-
-
-int CommonBigNum(int argc, char *const *argv) {
+int CommonBigNum(int __unused argc, char *const * __unused argv) {
 
     
 	plan_tests(kTestTestCount);

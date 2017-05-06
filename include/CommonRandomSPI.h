@@ -27,8 +27,6 @@
  *
  */
 
-#include <dispatch/dispatch.h>
-#include <dispatch/queue.h>
 #include <Availability.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -210,17 +208,15 @@ __OSX_AVAILABLE_STARTING(__MAC_10_7, __IPHONE_5_0);
 enum {
 	kCCRNGOptionIgnoreFIPS				= 0x00000001,
 	kCCRNGOptionNoPredictionResistance	= 0x00000002,
-	
 	kCCRNGOptionCryptoRNG				= 0x00000000,
 };
     
 // Accessor functions to get the rng "states" for internal Security Framework
 // use.
-#include <corecrypto/ccdrbg.h>
 #include <corecrypto/ccrng_system.h>
 
 struct ccrng_state *ccDevRandomGetRngState(void)
-__OSX_AVAILABLE_STARTING(__MAC_10_8, __IPHONE_6_0);
+__OSX_AVAILABLE_BUT_DEPRECATED(__MAC_10_8,__MAC_10_12,__IPHONE_6_0,__IPHONE_10_0);
 
 struct ccrng_state *ccDRBGGetRngState(void)
 __OSX_AVAILABLE_STARTING(__MAC_10_8, __IPHONE_6_0);

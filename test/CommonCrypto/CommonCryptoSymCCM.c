@@ -14,7 +14,7 @@
 #include "CCCryptorTestFuncs.h"
 #include "testbyteBuffer.h"
 #include "testmore.h"
-#include "ccMemory.h"
+#include "../../lib/ccMemory.h"
 
 #if (CCSYMCCM == 0)
 entryPoint(CommonCryptoSymCCM,"CommonCrypto Symmetric CCM Testing")
@@ -2465,7 +2465,7 @@ static int CCMRoundTrip(byteBuffer key, byteBuffer iv, byteBuffer ad, byteBuffer
     return 0;
 }
 
-static int CCCryptorCCMTestCase(size_t cnt, ccm_kat kat) {
+static int CCCryptorCCMTestCase(size_t __unused cnt, ccm_kat kat) {
     byteBuffer key = hexStringToBytes(kat.key);
     byteBuffer iv = hexStringToBytes(kat.nonce);
     byteBuffer plaintext = hexStringToBytes(kat.payload);
@@ -2478,12 +2478,18 @@ static int CCCryptorCCMTestCase(size_t cnt, ccm_kat kat) {
     
     
     CCMRoundTrip(key, iv, ad, mac, plaintext, ciphertext);
+
+    free(key);
+    free(iv);
+    free(plaintext);
+    free(ad);
+    free(mac_ct);
     free(mac);
     free(ciphertext);
     return 1;
 }
 
-int CommonCryptoSymCCM(int argc, char *const *argv) {
+int CommonCryptoSymCCM(int __unused argc, char *const * __unused argv) {
     plan_tests((int)(7*nvectors));
 
     for(size_t i=0; i < nvectors; i++) {

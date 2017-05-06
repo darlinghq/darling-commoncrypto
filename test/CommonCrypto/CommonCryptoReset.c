@@ -14,7 +14,7 @@
 #include "CCCryptorTestFuncs.h"
 #include "testbyteBuffer.h"
 #include "testmore.h"
-#include "ccMemory.h"
+#include "../../lib/ccMemory.h"
 
 
 
@@ -28,7 +28,7 @@ entryPoint(CommonCryptoReset,"CommonCrypto Reset Testing")
 
 static int kTestTestCount = 13;
 
-int CommonCryptoReset(int argc, char *const *argv)
+int CommonCryptoReset(int __unused argc, char *const * __unused argv)
 {
     CCCryptorRef cref;
 	CCCryptorStatus retval;
