@@ -43,11 +43,13 @@
 #define kCCRSAKeyContextSize ccrsa_full_ctx_size(kCCMaximumRSAKeyBytes)
 #define RSA_PKCS1_PAD_ENCRYPT	0x02
 
+#define DARLING_CAST_ISSUE this line has been commented out to avoid an issue
+
 typedef struct _CCRSACryptor {
 #if defined(_WIN32)//rdar://problem/27873676
     struct ccrsa_full_ctx fk[cc_ctx_n(struct ccrsa_full_ctx, ccrsa_full_ctx_size(ccn_sizeof(kCCMaximumRSAKeyBits)))];
 #else
-    ccrsa_full_ctx_decl(ccn_sizeof(kCCMaximumRSAKeyBits), fk);  
+   ccrsa_priv_ctx_decl(ccn_sizeof(kCCMaximumRSAKeyBits), fk);  
 #endif
     size_t keySize;
     CCRSAKeyType keyType;
@@ -60,7 +62,8 @@ ccMallocRSACryptor(size_t nbits, CCRSAKeyType __unused keyType)
     cc_size n = ccn_nof(nbits);
     if((retval = CC_XMALLOC(sizeof(CCRSACryptor))) == NULL) return NULL;
     retval->keySize = nbits;
-    ccrsa_ctx_n(retval->fk) = n;
+#warning DARLING_CAST_ISSUE
+    //ccrsa_ctx_n(retval->fk) = n;
     return retval;
 }
 
@@ -75,7 +78,8 @@ ccRSACryptorClear(CCRSACryptorRef theKey)
 
 static inline size_t
 ccRSAkeysize(CCRSACryptor *cryptor) {
-    return ccn_bitlen(ccrsa_ctx_n(cryptor->fk), ccrsa_ctx_m(cryptor->fk));
+#warning DARLING_CAST_ISSUE
+    return 8; //ccn_bitlen(ccrsa_ctx_n(cryptor->fk), ccrsa_ctx_m(cryptor->fk));
 }
 
 #pragma mark APIDone
@@ -106,7 +110,8 @@ CCRSACryptorGeneratePair(size_t keysize, uint32_t e, CCRSACryptorRef *publicKey,
     // Generate a public / private key pair compliant with FIPS 186 standard
     // as long as the keysize is one specified by the standard and that |e|>=17bits.
     // Consistency check done in corecrypto.
-    __Require_Action((ccrsa_generate_fips186_key(keysize, privateCryptor->fk, eSize, eBytes, theRng1, theRng2) == 0), errOut, retval = kCCDecodeError);
+#warning DARLING_CAST_ISSUE
+    //__Require_Action((ccrsa_generate_fips186_key(keysize, privateCryptor->fk, eSize, eBytes, theRng1, theRng2) == 0), errOut, retval = kCCDecodeError);
     
     privateCryptor->keyType = ccRSAKeyPrivate;
     __Require_Action((publicCryptor = CCRSACryptorGetPublicKeyFromPrivateKey(privateCryptor)) != NULL, errOut, retval = kCCMemoryFailure);
@@ -131,7 +136,8 @@ CCRSACryptorRef CCRSACryptorGetPublicKeyFromPrivateKey(CCRSACryptorRef privateCr
     
     CC_DEBUG_LOG("Entering\n");
     if((publicCryptor = ccMallocRSACryptor(privateCryptor->keySize, ccRSAKeyPublic)) == NULL)  return NULL;
-    ccrsa_init_pub(ccrsa_ctx_public(publicCryptor->fk), ccrsa_ctx_m(privateCryptor->fk), ccrsa_ctx_e(privateCryptor->fk));
+#warning DARLING_CAST_ISSUE
+    //ccrsa_init_pub(ccrsa_ctx_public(publicCryptor->fk), ccrsa_ctx_m(privateCryptor->fk), ccrsa_ctx_e(privateCryptor->fk));
     publicCryptor->keyType = ccRSAKeyPublic;
     return publicCryptor;
 }
@@ -182,18 +188,20 @@ CCCryptorStatus CCRSACryptorImport(const void *keyPackage, size_t keyPackageLen,
     
     switch(keyToMake) {
         case ccRSAKeyPublic:
-            ccrsa_ctx_n(ccrsa_ctx_public(cryptor->fk)) = keyN;
-            if(ccrsa_import_pub(ccrsa_ctx_public(cryptor->fk), keyPackageLen, keyPackage)) {
-                ccRSACryptorClear(cryptor);
+#warning DARLING_CAST_ISSUE
+            //ccrsa_ctx_n(ccrsa_ctx_public(cryptor->fk)) = keyN;
+            //if(ccrsa_import_pub(ccrsa_ctx_public(cryptor->fk), keyPackageLen, keyPackage)) {
+               // ccRSACryptorClear(cryptor);
                 return kCCDecodeError;
-            }
+            //}
             break;
         case ccRSAKeyPrivate:
-            ccrsa_ctx_n(cryptor->fk) = keyN;
-            if(ccrsa_import_priv(cryptor->fk, keyPackageLen, keyPackage)) {
+#warning DARLING_CAST_ISSUE
+            //ccrsa_ctx_n(cryptor->fk) = keyN;
+            //if(ccrsa_import_priv(cryptor->fk, keyPackageLen, keyPackage)) {
                 ccRSACryptorClear(cryptor);
                 return kCCDecodeError;
-            }
+           // }
             break;
     }
     cryptor->keyType = keyToMake;
@@ -218,23 +226,27 @@ CCCryptorStatus CCRSACryptorExport(CCRSACryptorRef cryptor, void *out, size_t *o
     if(!cryptor || !out) return kCCParamError;
     switch(cryptor->keyType) {
         case ccRSAKeyPublic:
-            bufsiz = ccrsa_export_pub_size(ccrsa_ctx_public(cryptor->fk));
+#warning DARLING_CAST_ISSUE
+            //bufsiz = ccrsa_export_pub_size(ccrsa_ctx_public(cryptor->fk));
             if(*outLen <= bufsiz) {
                 *outLen = bufsiz;
                 return kCCBufferTooSmall;
             }
             *outLen = bufsiz;
-            if(ccrsa_export_pub(ccrsa_ctx_public(cryptor->fk), bufsiz, out))
+#warning DARLING_CAST_ISSUE
+            //if(ccrsa_export_pub(ccrsa_ctx_public(cryptor->fk), bufsiz, out))
                 return kCCDecodeError;
             break;
         case ccRSAKeyPrivate:
-            bufsiz = ccrsa_export_priv_size(cryptor->fk);
+#warning DARLING_CAST_ISSUE
+            //bufsiz = ccrsa_export_priv_size(cryptor->fk);
             if(*outLen < bufsiz) {
                 *outLen = bufsiz;
                 return kCCBufferTooSmall;
             }
             *outLen = bufsiz;
-            if(ccrsa_export_priv(cryptor->fk, bufsiz, out))
+#warning DARLING_CAST_ISSUE
+            //if(ccrsa_export_priv(cryptor->fk, bufsiz, out))
                 return kCCDecodeError;
             break;
         default:
@@ -260,11 +272,13 @@ CCRSACryptorEncrypt(CCRSACryptorRef publicKey, CCAsymmetricPadding padding, cons
     
     switch(padding) {
         case ccPKCS1Padding:
-            if(ccrsa_encrypt_eme_pkcs1v15(ccrsa_ctx_public(publicKey->fk), ccDRBGGetRngState(), cipherTextLen, cipherText, plainTextLen, (uint8_t *) plainText)  != 0)
+#warning DARLING_CAST_ISSUE
+            //if(ccrsa_encrypt_eme_pkcs1v15(ccrsa_ctx_public(publicKey->fk), ccDRBGGetRngState(), cipherTextLen, cipherText, plainTextLen, (uint8_t *) plainText)  != 0)
                 retval =  kCCDecodeError;
             break;
-        case ccOAEPPadding:         
-            if(ccrsa_encrypt_oaep(ccrsa_ctx_public(publicKey->fk), CCDigestGetDigestInfo(digestType), ccDRBGGetRngState(), cipherTextLen, cipherText, plainTextLen, (uint8_t *) plainText, tagDataLen, tagData) != 0) 
+        case ccOAEPPadding:   
+#warning DARLING_CAST_ISSUE      
+            //if(ccrsa_encrypt_oaep(ccrsa_ctx_public(publicKey->fk), CCDigestGetDigestInfo(digestType), ccDRBGGetRngState(), cipherTextLen, cipherText, plainTextLen, (uint8_t *) plainText, tagDataLen, tagData) != 0) 
                 retval =  kCCDecodeError;
             break;
         default:
@@ -290,12 +304,14 @@ CCRSACryptorDecrypt(CCRSACryptorRef privateKey, CCAsymmetricPadding padding, con
     
     switch (padding) {
         case ccPKCS1Padding:
-            if(ccrsa_decrypt_eme_pkcs1v15(privateKey->fk, plainTextLen, plainText, cipherTextLen, (uint8_t *) cipherText) != 0)
+#warning DARLING_CAST_ISSUE
+            //if(ccrsa_decrypt_eme_pkcs1v15(privateKey->fk, plainTextLen, plainText, cipherTextLen, (uint8_t *) cipherText) != 0)
                 retval =  kCCDecodeError;
             break;
         case ccOAEPPadding:
-            if(ccrsa_decrypt_oaep(privateKey->fk, CCDigestGetDigestInfo(digestType), plainTextLen, plainText, cipherTextLen, (uint8_t *) cipherText,
-                                  tagDataLen, tagData) != 0) 
+#warning DARLING_CAST_ISSUE
+            //if(ccrsa_decrypt_oaep(privateKey->fk, CCDigestGetDigestInfo(digestType), plainTextLen, plainText, cipherTextLen, (uint8_t *) cipherText,
+              //                    tagDataLen, tagData) != 0) 
                 retval =  kCCDecodeError;
             break;
         default:
@@ -317,23 +333,24 @@ CCRSACryptorCrypt(CCRSACryptorRef rsaKey, const void *in, size_t inLen, void *ou
     
     if(inLen != keysizeBytes || *outLen < keysizeBytes) return kCCMemoryFailure;
     
-    cc_size n = ccrsa_ctx_n(rsaKey->fk);
-    cc_unit buf[n];
-    ccn_read_uint(n, buf, inLen, in);
+    //cc_size n = ccrsa_ctx_n(rsaKey->fk);
+    //cc_unit buf[n];
+    //ccn_read_uint(n, buf, inLen, in);
     
     switch(rsaKey->keyType) {
-        case ccRSAKeyPublic: 
-            ccrsa_pub_crypt(ccrsa_ctx_public(rsaKey->fk), buf, buf);
+        case ccRSAKeyPublic:
+#warning DARLING_CAST_ISSUE
+            //ccrsa_pub_crypt(ccrsa_ctx_public(rsaKey->fk), buf, buf);
             break;
         case ccRSAKeyPrivate:
-            ccrsa_priv_crypt(rsaKey->fk, buf, buf);
+           // ccrsa_priv_crypt(rsaKey->fk, buf, buf);
             break;
         default:
             return kCCParamError;
     }
     
     *outLen = keysizeBytes;
-    ccn_write_uint_padded(n, buf, *outLen, out);
+    //ccn_write_uint_padded(n, buf, *outLen, out);
     return kCCSuccess;
 }
 
@@ -403,8 +420,8 @@ CCRSACryptorCreatePairFromData(uint32_t e,
     __Require_Action(ccn_read_uint(ccn_nof_size(xq1Length), x_q1, xq1Length, xq1) == 0, errOut, retval = kCCParamError);
     __Require_Action(ccn_read_uint(ccn_nof_size(xq2Length), x_q2, xq2Length, xq2) == 0, errOut, retval = kCCParamError);
     __Require_Action(ccn_read_uint(ccn_nof_size(xqLength), x_q, xqLength, xq) == 0, errOut, retval = kCCParamError);
-    
-	__Require_Action(ccrsa_make_fips186_key(nbits, 1, e_value,
+#warning DARLING_CAST_ISSUE
+	/*__Require_Action(ccrsa_make_fips186_key(nbits, 1, e_value,
                                         ccn_nof_size(xp1Length), x_p1, ccn_nof_size(xp2Length), x_p2, ccn_nof_size(xpLength), x_p,
                                         ccn_nof_size(xq1Length), x_q1, ccn_nof_size(xq2Length), x_q2, ccn_nof_size(xqLength), x_q,
                                         privateCryptor->fk,
@@ -412,7 +429,7 @@ CCRSACryptorCreatePairFromData(uint32_t e,
                                         &nq, q,
                                         &nm, m,
                                         &nd, d) == 0, errOut, retval = kCCDecodeError);
-    
+    */
     privateCryptor->keyType = ccRSAKeyPrivate;
     
     __Require_Action((publicCryptor = CCRSACryptorGetPublicKeyFromPrivateKey(privateCryptor)) != NULL, errOut, retval = kCCMemoryFailure);
@@ -453,11 +470,13 @@ CCRSACryptorCreateFromData( CCRSAKeyType keyType, uint8_t *modulus, size_t modul
     size_t nbits = ccn_bitlen(n, m);
 
     __Require_Action((rsaKey = ccMallocRSACryptor(nbits, keyType)) != NULL, errOut, retval = kCCMemoryFailure);
-
-    __Require_Action(ccn_read_uint(n, ccrsa_ctx_m(rsaKey->fk), modulusLength, modulus) == 0, errOut, retval = kCCParamError);
-    __Require_Action(ccn_read_uint(n, ccrsa_ctx_e(rsaKey->fk), publicExponentLength, publicExponent) == 0, errOut, retval = kCCParamError);
-    cczp_init(ccrsa_ctx_zm(rsaKey->fk));
-    rsaKey->keySize = ccn_bitlen(n, ccrsa_ctx_m(rsaKey->fk));
+#warning DARLING_CAST_ISSUE
+    //__Require_Action(ccn_read_uint(n, ccrsa_ctx_m(rsaKey->fk), modulusLength, modulus) == 0, errOut, retval = kCCParamError);
+#warning DARLING_CAST_ISSUE
+    //__Require_Action(ccn_read_uint(n, ccrsa_ctx_e(rsaKey->fk), publicExponentLength, publicExponent) == 0, errOut, retval = kCCParamError);
+#warning DARLING_CAST_ISSUE
+    //cczp_init(ccrsa_ctx_zm(rsaKey->fk));
+    //rsaKey->keySize = ccn_bitlen(n, ccrsa_ctx_m(rsaKey->fk));
 
 	switch(keyType) {
 		case ccRSAKeyPublic:
@@ -465,22 +484,23 @@ CCRSACryptorCreateFromData( CCRSAKeyType keyType, uint8_t *modulus, size_t modul
             break;
 		
 		case ccRSAKeyPrivate: {
-            ccrsa_full_ctx_t fk = (ccrsa_full_ctx_t)(rsaKey->fk); //ccrsa_ctx_private_xxx() macros take full key now
+#warning DARLING_CAST_ISSUE
+            //ccrsa_full_ctx_t fk = (ccrsa_full_ctx_t)(rsaKey->fk); //ccrsa_ctx_private_xxx() macros take full key now
             size_t psize = ccn_nof_size(pLength);
             size_t qsize = ccn_nof_size(qLength);
 
-            
-            CCZP_N(ccrsa_ctx_private_zp(fk)) = psize;
-            __Require_Action(ccn_read_uint(psize, CCZP_PRIME(ccrsa_ctx_private_zp(fk)), pLength, p) == 0, errOut, retval = kCCParamError);
-            CCZP_N(ccrsa_ctx_private_zq(fk)) = qsize;
-            __Require_Action(ccn_read_uint(qsize, CCZP_PRIME(ccrsa_ctx_private_zq(fk)), qLength, q) == 0, errOut, retval = kCCParamError);
+#warning DARLING_CAST_ISSUE
+            //CCZP_N(ccrsa_ctx_private_zp(fk)) = psize;
+            //__Require_Action(ccn_read_uint(psize, CCZP_PRIME(ccrsa_ctx_private_zp(fk)), pLength, p) == 0, errOut, retval = kCCParamError);
+            //CCZP_N(ccrsa_ctx_private_zq(fk)) = qsize;
+            //__Require_Action(ccn_read_uint(qsize, CCZP_PRIME(ccrsa_ctx_private_zq(fk)), qLength, q) == 0, errOut, retval = kCCParamError);
 
-            ccrsa_crt_makekey(ccrsa_ctx_zm(rsaKey->fk), ccrsa_ctx_e(rsaKey->fk), ccrsa_ctx_d(rsaKey->fk),
-                              ccrsa_ctx_private_zp(fk),
-                              ccrsa_ctx_private_dp(fk), ccrsa_ctx_private_qinv(fk),
-                              ccrsa_ctx_private_zq(fk), ccrsa_ctx_private_dq(fk));
+            //ccrsa_crt_makekey(ccrsa_ctx_zm(rsaKey->fk), ccrsa_ctx_e(rsaKey->fk), ccrsa_ctx_d(rsaKey->fk),
+                      //        ccrsa_ctx_private_zp(fk),
+                      //        ccrsa_ctx_private_dp(fk), ccrsa_ctx_private_qinv(fk),
+                      //        ccrsa_ctx_private_zq(fk), ccrsa_ctx_private_dq(fk));
             
-            rsaKey->keyType = ccRSAKeyPrivate;
+          //  rsaKey->keyType = ccRSAKeyPrivate;
 
        		break;
         }
@@ -509,13 +529,13 @@ CCRSAGetKeyComponents(CCRSACryptorRef rsaKey, uint8_t *modulus, size_t *modulusL
     CC_DEBUG_LOG("Entering\n");
 	switch(rsa->keyType) {
 		case ccRSAKeyPublic: {
-            if(ccrsa_get_pubkey_components(ccrsa_ctx_public(rsaKey->fk), modulus, modulusLength, exponent, exponentLength)) return kCCParamError;
+            //if(ccrsa_get_pubkey_components(ccrsa_ctx_public(rsaKey->fk), modulus, modulusLength, exponent, exponentLength)) return kCCParamError;
             break;
         }
             
 		case ccRSAKeyPrivate: {
-            if(ccrsa_get_fullkey_components(rsaKey->fk, modulus, modulusLength, exponent, exponentLength,
-                                             p, pLength, q, qLength)) return kCCParamError;
+            //if(ccrsa_get_fullkey_components(rsaKey->fk, modulus, modulusLength, exponent, exponentLength,
+                                  //           p, pLength, q, qLength)) return kCCParamError;
             break;
         }
             
@@ -537,8 +557,8 @@ CCRSACryptorSign(CCRSACryptorRef privateKey, CCAsymmetricPadding padding,
     
     switch(padding) {
         case ccPKCS1Padding: 
-            if(ccrsa_sign_pkcs1v15(privateKey->fk, CCDigestGetDigestInfo(digestType)->oid,
-                                   hashSignLen, hashToSign, signedDataLen, signedData) != 0)
+            //if(ccrsa_sign_pkcs1v15(privateKey->fk, CCDigestGetDigestInfo(digestType)->oid,
+                         //          hashSignLen, hashToSign, signedDataLen, signedData) != 0)
                 return kCCDecodeError;
             break;
   
@@ -567,8 +587,8 @@ CCRSACryptorVerify(CCRSACryptorRef publicKey, CCAsymmetricPadding padding,
 
     switch(padding) {
         case ccPKCS1Padding: 
-            if(ccrsa_verify_pkcs1v15(ccrsa_ctx_public(publicKey->fk), di->oid,
-                                     hashLen, hash, signedDataLen, signedData, &valid) != 0)
+           // if(ccrsa_verify_pkcs1v15(ccrsa_ctx_public(publicKey->fk), di->oid,
+           //                          hashLen, hash, signedDataLen, signedData, &valid) != 0)
                 return kCCDecodeError;
             if(!valid) return kCCDecodeError;
             break;

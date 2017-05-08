@@ -23,7 +23,7 @@
 
 // #define COMMON_HMAC_FUNCTIONS
 #include <CommonCrypto/CommonHMAC.h>
-#include <CommonCrypto/CommonHmacSPI.h>
+#include <CommonCrypto/CommonHMacSPI.h>
 #include <CommonCrypto/CommonDigest.h>
 #include <CommonCrypto/CommonDigestSPI.h>
 #include "CommonDigestPriv.h"
