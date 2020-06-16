@@ -22,13 +22,14 @@
  */
 
 // #define COMMON_DH_FUNCTIONS
+#include <AssertMacros.h>
 #include <CommonCrypto/CommonDH.h>
 #include <CommonCrypto/CommonRandomSPI.h>
 #include "ccDispatch.h"
 #include <corecrypto/ccn.h>
+#include <corecrypto/cc_priv.h>
 #include <corecrypto/ccdh.h>
 #include <corecrypto/ccdh_gp.h>
-#include "ccMemory.h"
 #include "ccErrors.h"
 #include "ccGlobals.h"
 #include "ccdebug.h"
@@ -60,33 +61,32 @@ CCDHCreate(CCDHParameters dhParameter)
     CC_DEBUG_LOG("Entering\n");
     CC_NONULLPARMRETNULL(dhParameter);
     if (dhParameter == kCCDHRFC2409Group2) {
-        stockParm = CC_XMALLOC(sizeof(CCDHParmSetstruct));
+        require((stockParm = malloc(sizeof(CCDHParmSetstruct))) != NULL, error);
         stockParm->gp = ccdh_gp_rfc2409group02();
         stockParm->malloced = true;
         CCDHParm = stockParm;
     } else if (dhParameter == kCCDHRFC3526Group5) {
-        stockParm = CC_XMALLOC(sizeof(CCDHParmSetstruct));
+        require((stockParm = malloc(sizeof(CCDHParmSetstruct))) != NULL, error);
         stockParm->gp = ccdh_gp_rfc3526group05();
         stockParm->malloced = true;
         CCDHParm = stockParm;
-    } else {
     }
-    
-    retval = CC_XMALLOC(sizeof(CCDHstruct));
+
+    retval = malloc(sizeof(CCDHstruct));
     if(retval == NULL) goto error;
     
     retSize = ccdh_full_ctx_size(ccdh_ccn_size(CCDHParm->gp));
-    retval->ctx._full = CC_XMALLOC(retSize);
+    retval->ctx = malloc(retSize);
 
-    if(retval->ctx._full == NULL) goto error;
-    ccdh_ctx_init(CCDHParm->gp, retval->ctx);
+    if(retval->ctx == NULL) goto error;
+    ccdh_ctx_init(CCDHParm->gp, ccdh_ctx_public(retval->ctx));
     retval->parms = CCDHParm;
         
     return (CCDHRef) retval;
 
 error:
-    if(stockParm) CC_XFREE(stockParm, sizeof(CCDHParmSetstruct));
-    if(retval) CC_XFREE(retval, retSize);
+    if(stockParm) free(stockParm);
+    if(retval) free(retval);
     return NULL;
 }
 
@@ -96,12 +96,12 @@ CCDHRelease(CCDHRef ref)
     CC_DEBUG_LOG("Entering\n");
     if(ref == NULL) return;
     CCDH keyref = (CCDH) ref;
-    if(keyref->ctx._full) 
-        CC_XFREE(keyref->ctx._full, ccdh_full_ctx_size(ccdh_ccn_size(keyref->parms->gp)));
-    keyref->ctx._full = NULL;
-    CC_XFREE(keyref->parms, sizeof(CCDHParmSetstruct));
+    if(keyref->ctx)
+        free(keyref->ctx);
+    keyref->ctx = NULL;
+    free(keyref->parms);
     keyref->parms = NULL;
-    CC_XFREE(keyref, sizeof(CCDHstruct));
+    free(keyref);
 }
 
 int
@@ -114,17 +114,17 @@ CCDHGenerateKey(CCDHRef ref, void *output, size_t *outputLength)
     
     CCDH keyref = (CCDH) ref;
     
-    if(ccdh_generate_key(keyref->parms->gp, ccDRBGGetRngState(), keyref->ctx.pub))
+    if(ccdh_generate_key(keyref->parms->gp, ccDRBGGetRngState(), keyref->ctx))
         return -1;
     
-    size_t size_needed = ccdh_export_pub_size(keyref->ctx);
+    size_t size_needed = ccdh_export_pub_size(ccdh_ctx_public(keyref->ctx));
     if(size_needed > *outputLength) {
         *outputLength = size_needed;
         return -1;
     }
     
     *outputLength = size_needed;
-    ccdh_export_pub(keyref->ctx, output);
+    ccdh_export_pub(ccdh_ctx_public(keyref->ctx), output);
     return 0;
 }
 
@@ -140,24 +140,26 @@ CCDHComputeKey(unsigned char *sharedKey, size_t *sharedKeyLen, const void *peerP
     
     CCDH keyref = (CCDH) ref;
     ccdh_pub_ctx_decl_gp(keyref->parms->gp, peer_pub);
-    cc_size n = ccdh_ctx_n(keyref->ctx);
-    cc_unit skey[n];
     
-    if(ccdh_import_pub(keyref->parms->gp, peerPubKeyLen, peerPubKey,
-                    peer_pub))
-        return -1;
-    
-    if(ccdh_compute_key(keyref->ctx, peer_pub, skey))
-        return -1;
-    
-    size_t size_needed = ccn_write_uint_size(n, skey);
-    if(size_needed > *sharedKeyLen) {
+    // Return the expected value in case of error
+    size_t size_needed = CC_BITLEN_TO_BYTELEN(ccdh_gp_prime_bitlen(keyref->parms->gp));
+    if (size_needed > *sharedKeyLen) {
         *sharedKeyLen = size_needed;
         return -1;
     }
-    *sharedKeyLen = size_needed;
-    (void) ccn_write_uint_padded(n, skey, *sharedKeyLen, sharedKey);
+
+    // Import key
+    if (ccdh_import_pub(keyref->parms->gp, peerPubKeyLen, peerPubKey,
+                       peer_pub)) {
+        *sharedKeyLen = size_needed;
+        return -2;
+    }
     
+    // Export secret with no leading zero
+    if (ccdh_compute_shared_secret(keyref->ctx, peer_pub, sharedKeyLen,sharedKey,ccrng(NULL))) {
+        return -3;
+    }
+
     return 0;
 
 }
@@ -173,19 +175,19 @@ CCDHParametersCreateFromData(const void *p, size_t pLen, const void *g, size_t g
     cc_size gsize = ccn_nof_size(gLen);
     cc_size n = (psize > gsize) ? psize: gsize;
     cc_unit pval[n], gval[n];
-    
-    CCDHParmSet retval = CC_XMALLOC(sizeof(CCDHParmSetstruct));
+
+    CCDHParmSet retval = malloc(sizeof(CCDHParmSetstruct));
     if(!retval) goto error;
     
     retval->malloced = ccdh_gp_size(n);
-    retval->gp.gp = (ccdh_gp *) CC_XMALLOC(retval->malloced);
-    if(!retval->gp.gp) goto error;
-    if(ccdh_init_gp(retval->gp._ncgp, n, pval, gval, (cc_size) l))
+    retval->gp = malloc(retval->malloced);
+    if(retval->gp==NULL) goto error;
+    if(ccdh_init_gp((ccdh_gp_t)retval->gp, n, pval, gval, (cc_size) l)) //const is discarded in retval->gp
         goto error;
     return retval;
 error:
-    if(retval && retval->gp.gp) CC_XFREE((ccdh_gp *) retval->gp.gp, retval->malloced);
-    if(retval) CC_XFREE(retval, sizeof(CCDHParmSetstruct));
+    if(retval && retval->gp) free((ccdh_gp_t)retval->gp); //const is discarded in retval->gp
+    if(retval) free(retval);
     return NULL;
 }
 
@@ -199,11 +201,11 @@ CCDHParametersRelease(CCDHParameters parameters)
 
     CCDHParmSet CCDHParm = (CCDHParmSet) parameters;
     if(CCDHParm->malloced) {
-        CC_XFREE((void *) parameters->gp.gp, retval->malloced);
+        free((ccdh_gp_t)parameters->gp); //const is discarded in retval->gp
     }
     CCDHParm->malloced = 0;
-    CCDHParm->gp.gp = NULL;
-    CC_XFREE(CCDHParm, sizeof(CCDHParmSetstruct));
+    CCDHParm->gp = NULL;
+    free(CCDHParm);
 }
 
 // TODO - needs PKCS3 in/out

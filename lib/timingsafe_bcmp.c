@@ -25,8 +25,7 @@
  *  timingsafe_bcmp.c
  */
 
-#if defined(_WIN32)
-//remove this file after rdar://problem/28144944
+#if defined(_WIN32) || defined(__ANDROID__)
 #include <CommonCrypto/CommonCryptor.h>
 #include <CommonCrypto/CommonCryptorSPI.h>
 #include <corecrypto/cc_priv.h>

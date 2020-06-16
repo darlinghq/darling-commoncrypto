@@ -49,19 +49,6 @@ extern "C" {
 #define CC_STREAMKEYSCHED  2048
 #define CC_MODEKEYSCHED  2048
 #define CC_MAXBLOCKSIZE  128
-    
-typedef struct cipherMode_t {
-    dispatch_once_t init;
-    const struct ccmode_ecb* ecb;
-    const struct ccmode_cbc* cbc;
-    const struct ccmode_cfb* cfb;
-    const struct ccmode_cfb8* cfb8;
-    const struct ccmode_ctr* ctr;
-    const struct ccmode_ofb* ofb;
-    const struct ccmode_xts* xts;
-    const struct ccmode_gcm* gcm;
-    const struct ccmode_ccm* ccm;
-} cipherMode;
 
 #define ACTIVE 1
 #define RELEASED 0xDEADBEEF
@@ -94,20 +81,22 @@ getRealCryptor(CCCryptorRef p, int checkactive) {
     if(p->compat) p = p->compat;
 #ifdef DEBUG
     if(checkactive && p->active != ACTIVE) printf("Using Finalized Cryptor %16llx\n", p->cryptorID);
+#else
+    (void) checkactive;
 #endif
     return p;
 }
     
-    
-
-    
 #define CCCRYPTOR_SIZE  sizeof(struct _CCCryptor)
 #define kCCContextSizeGENERIC (sizeof(struct _CCCryptor))
 #define CC_COMPAT_SIZE (sizeof(void *)*2)
-
-
+    
+#define AESGCM_MIN_TAG_LEN 8
+#define AESGCM_MIN_IV_LEN  12
+#define AESGCM_BLOCK_LEN  16
+    
 const corecryptoMode getCipherMode(CCAlgorithm cipher, CCMode mode, CCOperation direction);
-
+    
 #ifdef __cplusplus
 }
 #endif

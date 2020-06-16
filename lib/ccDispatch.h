@@ -29,14 +29,14 @@
 #ifndef ccDispatch_h
 #define ccDispatch_h
 
-#if defined (_WIN32)   
+#if defined (_WIN32)
     #include <windows.h>
     #define dispatch_once_t  INIT_ONCE
     typedef void (*dispatch_function_t)(void *);
     void cc_dispatch_once(dispatch_once_t *predicate, void *context, dispatch_function_t function);
 #else
     #include <dispatch/dispatch.h>
-    #define cc_dispatch_once(predicate, context, function) dispatch_once_f(predicate, context, function);
+    #define cc_dispatch_once(predicate, context, function) dispatch_once_f(predicate, context, function)
 #endif
 
 #endif /* ccDispatch_h */
