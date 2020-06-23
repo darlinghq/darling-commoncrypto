@@ -8,10 +8,13 @@ add_compile_options(
 
 add_definitions(
 	-DNDEBUG
+	-DCORECRYPTO_DONOT_USE_TRANSPARENT_UNION
 )
 
 include_directories(
 	${CMAKE_CURRENT_SOURCE_DIR}/include
+	${CMAKE_CURRENT_SOURCE_DIR}/libcn
+	${CMAKE_CURRENT_SOURCE_DIR}/lib
 )
 
 
@@ -85,6 +88,7 @@ add_circular(commonCrypto FAT
 		macho
 		libdispatch_shared
 		corecrypto
+		system_trace
 )
 make_fat(commonCrypto)
 
