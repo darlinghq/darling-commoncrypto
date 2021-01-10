@@ -75,6 +75,7 @@ add_circular(commonCrypto FAT
 	libcn/CommonCRC.c
 	libcn/CommonBaseXX.c
 	libcn/CommonBuffering.c
+	lib/CommonCollabKeyGen.c
 
 	SIBLINGS
 		system_dyld
@@ -91,5 +92,9 @@ add_circular(commonCrypto FAT
 		system_trace
 )
 make_fat(commonCrypto)
+
+target_link_options(commonCrypto PRIVATE
+	-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/exports.exp-in
+)
 
 install(TARGETS commonCrypto DESTINATION libexec/darling/usr/lib/system)
