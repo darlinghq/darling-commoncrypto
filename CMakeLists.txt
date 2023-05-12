@@ -60,6 +60,8 @@ add_circular(commonCrypto FAT
 	lib/CommonBigNum.c
 	lib/CommonCMAC.c
 	lib/CommonCryptor.c
+	lib/CommonCryptorChaCha20.c
+	lib/CommonCryptorChaCha20Poly1305.c
 	lib/CommonDH.c
 	lib/CommonDigest.c
 	lib/CommonECCryptor.c
@@ -70,7 +72,6 @@ add_circular(commonCrypto FAT
 	lib/CommonRSACryptor.c
 	lib/CommonSymmetricKeywrap.c
 	lib/corecryptoSymmetricBridge.c
-	lib/CommonCryptorRC4.c
 	lib/CommonCryptorDES.c
 	libcn/CommonCRC.c
 	libcn/CommonBaseXX.c
