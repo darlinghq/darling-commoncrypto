@@ -4,6 +4,7 @@ add_compile_options(
 	-nostdinc
 	-Wno-unused-command-line-argument
 	-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/exports.exp-in
+	-Wno-error=incompatible-pointer-types
 )
 
 add_definitions(
