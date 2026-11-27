@@ -23,6 +23,9 @@
 
 // #define COMMON_DH_FUNCTIONS
 #include <AssertMacros.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <CommonCrypto/CommonDH.h>
 #include <CommonCrypto/CommonRandomSPI.h>
 #include "ccDispatch.h"
@@ -170,15 +173,28 @@ CCDHParametersCreateFromData(const void *p, size_t pLen, const void *g, size_t g
     CC_DEBUG_LOG("Entering\n");
     CC_NONULLPARMRETNULL(p);
     CC_NONULLPARMRETNULL(g);
-    
-    cc_size psize = ccn_nof_size(pLen);
-    cc_size gsize = ccn_nof_size(gLen);
-    cc_size n = (psize > gsize) ? psize: gsize;
+
+    // p and g are big-endian unsigned integers; leading zero bytes carry no value.
+    const uint8_t *pb = p, *gb = g;
+    while (pLen > 0 && *pb == 0) { pb++; pLen--; }
+    while (gLen > 0 && *gb == 0) { gb++; gLen--; }
+
+    // The modulus must be odd and at least 3, the generator in [2, p-1], and the
+    // private value length (in bits, 0 meaning unspecified) must fit in the modulus.
+    if (pLen == 0 || gLen == 0) return NULL;
+    if ((pb[pLen - 1] & 1) == 0) return NULL;
+    if (pLen == 1 && pb[0] < 3) return NULL;
+    if (gLen == 1 && gb[0] < 2) return NULL;
+    if (gLen > pLen || (gLen == pLen && memcmp(gb, pb, pLen) >= 0)) return NULL;
+    if (l > pLen * 8) return NULL;
+
+    cc_size n = ccn_nof_size(pLen);
     cc_unit pval[n], gval[n];
+    if (ccn_read_uint(n, pval, pLen, pb) || ccn_read_uint(n, gval, gLen, gb)) return NULL;
 
     CCDHParmSet retval = malloc(sizeof(CCDHParmSetstruct));
-    if(!retval) goto error;
-    
+    if(!retval) return NULL;
+
     retval->malloced = ccdh_gp_size(n);
     retval->gp = malloc(retval->malloced);
     if(retval->gp==NULL) goto error;
@@ -186,8 +202,8 @@ CCDHParametersCreateFromData(const void *p, size_t pLen, const void *g, size_t g
         goto error;
     return retval;
 error:
-    if(retval && retval->gp) free((ccdh_gp_t)retval->gp); //const is discarded in retval->gp
-    if(retval) free(retval);
+    if(retval->gp) free((ccdh_gp_t)retval->gp); //const is discarded in retval->gp
+    free(retval);
     return NULL;
 }
 
