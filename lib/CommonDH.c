@@ -23,6 +23,7 @@
 
 // #define COMMON_DH_FUNCTIONS
 #include <AssertMacros.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,7 +40,8 @@
 
 typedef struct CCDHParameters_s {
     ccdh_const_gp_t gp;
-    size_t malloced;
+    size_t malloced;   // bytes of gp storage this set owns, 0 when gp is not ours
+    bool stockCopy;    // a private copy made by CCDHCreate for a stock group
 } CCDHParmSetstruct, *CCDHParmSet; 
 
 typedef struct DH_ {
@@ -66,12 +68,14 @@ CCDHCreate(CCDHParameters dhParameter)
     if (dhParameter == kCCDHRFC2409Group2) {
         require((stockParm = malloc(sizeof(CCDHParmSetstruct))) != NULL, error);
         stockParm->gp = ccdh_gp_rfc2409group02();
-        stockParm->malloced = true;
+        stockParm->malloced = 0;
+        stockParm->stockCopy = true;
         CCDHParm = stockParm;
     } else if (dhParameter == kCCDHRFC3526Group5) {
         require((stockParm = malloc(sizeof(CCDHParmSetstruct))) != NULL, error);
         stockParm->gp = ccdh_gp_rfc3526group05();
-        stockParm->malloced = true;
+        stockParm->malloced = 0;
+        stockParm->stockCopy = true;
         CCDHParm = stockParm;
     }
 
@@ -102,7 +106,9 @@ CCDHRelease(CCDHRef ref)
     if(keyref->ctx)
         free(keyref->ctx);
     keyref->ctx = NULL;
-    free(keyref->parms);
+    // Only the copy of a stock group made by CCDHCreate belongs to the context; parameters
+    // created with CCDHParametersCreateFromData stay with their caller.
+    if(keyref->parms && keyref->parms->stockCopy) free(keyref->parms);
     keyref->parms = NULL;
     free(keyref);
 }
@@ -195,7 +201,9 @@ CCDHParametersCreateFromData(const void *p, size_t pLen, const void *g, size_t g
     CCDHParmSet retval = malloc(sizeof(CCDHParmSetstruct));
     if(!retval) return NULL;
 
-    retval->malloced = ccdh_gp_size(n);
+    retval->stockCopy = false;
+    // ccdh_gp_size takes the size of the prime in bytes, not in units.
+    retval->malloced = ccdh_gp_size(ccn_sizeof_n(n));
     retval->gp = malloc(retval->malloced);
     if(retval->gp==NULL) goto error;
     if(ccdh_init_gp((ccdh_gp_t)retval->gp, n, pval, gval, (cc_size) l)) //const is discarded in retval->gp
