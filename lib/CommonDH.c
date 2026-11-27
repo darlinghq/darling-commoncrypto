@@ -23,6 +23,10 @@
 
 // #define COMMON_DH_FUNCTIONS
 #include <AssertMacros.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <CommonCrypto/CommonDH.h>
 #include <CommonCrypto/CommonRandomSPI.h>
 #include "ccDispatch.h"
@@ -36,7 +40,8 @@
 
 typedef struct CCDHParameters_s {
     ccdh_const_gp_t gp;
-    size_t malloced;
+    size_t malloced;   // bytes of gp storage this set owns, 0 when gp is not ours
+    bool stockCopy;    // a private copy made by CCDHCreate for a stock group
 } CCDHParmSetstruct, *CCDHParmSet; 
 
 typedef struct DH_ {
@@ -63,12 +68,14 @@ CCDHCreate(CCDHParameters dhParameter)
     if (dhParameter == kCCDHRFC2409Group2) {
         require((stockParm = malloc(sizeof(CCDHParmSetstruct))) != NULL, error);
         stockParm->gp = ccdh_gp_rfc2409group02();
-        stockParm->malloced = true;
+        stockParm->malloced = 0;
+        stockParm->stockCopy = true;
         CCDHParm = stockParm;
     } else if (dhParameter == kCCDHRFC3526Group5) {
         require((stockParm = malloc(sizeof(CCDHParmSetstruct))) != NULL, error);
         stockParm->gp = ccdh_gp_rfc3526group05();
-        stockParm->malloced = true;
+        stockParm->malloced = 0;
+        stockParm->stockCopy = true;
         CCDHParm = stockParm;
     }
 
@@ -99,7 +106,9 @@ CCDHRelease(CCDHRef ref)
     if(keyref->ctx)
         free(keyref->ctx);
     keyref->ctx = NULL;
-    free(keyref->parms);
+    // Only the copy of a stock group made by CCDHCreate belongs to the context; parameters
+    // created with CCDHParametersCreateFromData stay with their caller.
+    if(keyref->parms && keyref->parms->stockCopy) free(keyref->parms);
     keyref->parms = NULL;
     free(keyref);
 }
@@ -170,24 +179,39 @@ CCDHParametersCreateFromData(const void *p, size_t pLen, const void *g, size_t g
     CC_DEBUG_LOG("Entering\n");
     CC_NONULLPARMRETNULL(p);
     CC_NONULLPARMRETNULL(g);
-    
-    cc_size psize = ccn_nof_size(pLen);
-    cc_size gsize = ccn_nof_size(gLen);
-    cc_size n = (psize > gsize) ? psize: gsize;
+
+    // p and g are big-endian unsigned integers; leading zero bytes carry no value.
+    const uint8_t *pb = p, *gb = g;
+    while (pLen > 0 && *pb == 0) { pb++; pLen--; }
+    while (gLen > 0 && *gb == 0) { gb++; gLen--; }
+
+    // The modulus must be odd and at least 3, the generator in [2, p-1], and the
+    // private value length (in bits, 0 meaning unspecified) must fit in the modulus.
+    if (pLen == 0 || gLen == 0) return NULL;
+    if ((pb[pLen - 1] & 1) == 0) return NULL;
+    if (pLen == 1 && pb[0] < 3) return NULL;
+    if (gLen == 1 && gb[0] < 2) return NULL;
+    if (gLen > pLen || (gLen == pLen && memcmp(gb, pb, pLen) >= 0)) return NULL;
+    if (l > pLen * 8) return NULL;
+
+    cc_size n = ccn_nof_size(pLen);
     cc_unit pval[n], gval[n];
+    if (ccn_read_uint(n, pval, pLen, pb) || ccn_read_uint(n, gval, gLen, gb)) return NULL;
 
     CCDHParmSet retval = malloc(sizeof(CCDHParmSetstruct));
-    if(!retval) goto error;
-    
-    retval->malloced = ccdh_gp_size(n);
+    if(!retval) return NULL;
+
+    retval->stockCopy = false;
+    // ccdh_gp_size takes the size of the prime in bytes, not in units.
+    retval->malloced = ccdh_gp_size(ccn_sizeof_n(n));
     retval->gp = malloc(retval->malloced);
     if(retval->gp==NULL) goto error;
     if(ccdh_init_gp((ccdh_gp_t)retval->gp, n, pval, gval, (cc_size) l)) //const is discarded in retval->gp
         goto error;
     return retval;
 error:
-    if(retval && retval->gp) free((ccdh_gp_t)retval->gp); //const is discarded in retval->gp
-    if(retval) free(retval);
+    if(retval->gp) free((ccdh_gp_t)retval->gp); //const is discarded in retval->gp
+    free(retval);
     return NULL;
 }
 
